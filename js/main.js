@@ -1,7 +1,8 @@
-// ============================== SCENE SETUP ==============================
+// ========================== SCENE ==========================
 var scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
 
+// ========================== FLOOR ==========================
 var floorGeometry = new THREE.PlaneGeometry(100, 100);
 var floorMaterial = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
 var floor = new THREE.Mesh(floorGeometry, floorMaterial);
@@ -12,24 +13,108 @@ floor.receiveShadow = true;
 
 var textureLoader = new THREE.TextureLoader();
 textureLoader.load('assets/textures/grass.jpg', function(texture) {
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(10, 10);
-  floorMaterial.map = texture;
-  floorMaterial.needsUpdate = true;
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(10, 10);
+    floorMaterial.map = texture;
+    floorMaterial.needsUpdate = true;
 });
 
-// ============================== CAMERA & RENDERER ==============================
+// ========================== CAMERA ==========================
 var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 2, 10);
 camera.lookAt(0, 0, 0);
 
+// ========================== RENDERER ==========================
 var renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.getElementById('container').appendChild(renderer.domElement);
 renderer.shadowMap.enabled = true;
 
-// ============================== LIGHTS ==============================
+// ========================== GLOBAL VARIABLES ==========================
+var customModel;
+var parts = {};
+var activeTweens = [];
+
+// ========================== TWEEN CONTROL ==========================
+function clearTweens() {
+    activeTweens.forEach(function(t) { t.stop(); });
+    activeTweens = [];
+    Object.values(parts).forEach(function(p) {
+        if (p && p.rotation) p.rotation.set(0, 0, 0);
+    });
+}
+
+// ========================== LOAD MODEL ==========================
+window.changeModel = function changeModel(modelPath) {
+    clearTweens();
+    if (customModel) {
+        scene.remove(customModel);
+        customModel = null;
+        parts = {};
+    }
+    
+    console.log("Carregando o modelo:", modelPath);
+    var loader = new THREE.FBXLoader();
+    loader.load(
+        modelPath,
+        function (object) {
+            var bbox = new THREE.Box3().setFromObject(object);
+            var size = new THREE.Vector3();
+            bbox.getSize(size);
+            var maxDim = Math.max(size.x, size.y, size.z);
+            var desiredSize = 4.5;
+            var scaleFactor = desiredSize / maxDim;
+            object.scale.set(scaleFactor, scaleFactor, scaleFactor);
+
+            bbox.setFromObject(object);
+
+            var center = bbox.getCenter(new THREE.Vector3());
+            object.position.x -= center.x;
+            object.position.z -= center.z;
+
+            bbox.setFromObject(object);
+            var floorY = -2;
+            var deltaY = floorY - bbox.min.y;
+            object.position.y += deltaY;
+
+            var target = new THREE.Vector3(camera.position.x, object.position.y, camera.position.z);
+            object.lookAt(target);
+
+            if (modelPath === 'assets/modelos/legomandefault.fbx' || modelPath === 'assets/modelos/lego spider man.fbx') {
+                object.rotation.y -= Math.PI / 2;
+            }
+
+            scene.add(object);
+            customModel = object;
+
+            if (modelPath === 'assets/modelos/legomandefault.fbx') {
+                parts.head = object.getObjectByName('Cylinder006');
+                parts.armLeft = object.getObjectByName('Cylinder009');
+                parts.armRight = object.getObjectByName('Cylinder012');
+                parts.handLeft = object.getObjectByName('Cylinder004');
+                parts.handRight = object.getObjectByName('Cylinder016');
+                parts.legLeft = object.getObjectByName('Cylinder014');
+                parts.legRight = object.getObjectByName('Cylinder013');
+                parts.trousers = object.getObjectByName('Cylinder010');
+                parts.innertight = object.getObjectByName('Cylinder011');
+                console.log("Partes disponíveis:", parts);
+            } else {
+                parts = {};
+            }
+        },
+        undefined,
+        function (error) {
+            console.error('Erro ao carregar modelo:', error);
+            alert("Falha ao carregar o modelo. Verifique o caminho '" + modelPath + "' e se o arquivo é um FBX válido.");
+        }
+    );
+}
+
+// ========================== INITIAL MODEL ==========================
+changeModel('assets/modelos/legomandefault.fbx');
+
+// ========================== LIGHTS ==========================
 var ambientLight = new THREE.AmbientLight(0x404040);
 scene.add(ambientLight);
 
@@ -38,7 +123,7 @@ sunLight.position.set(50, 100, 50);
 sunLight.castShadow = true;
 scene.add(sunLight);
 
-// ============================== CONTROLS ==============================
+// ========================== ORBIT CONTROLS ==========================
 var controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
@@ -46,145 +131,72 @@ controls.minDistance = 5;
 controls.maxDistance = 50;
 controls.maxPolarAngle = Math.PI / 2;
 
+// ========================== WINDOW RESIZE ==========================
 window.addEventListener('resize', function () {
-  var width = window.innerWidth;
-  var height = window.innerHeight;
-  renderer.setSize(width, height);
-  camera.aspect = width / height;
-  camera.updateProjectionMatrix();
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
 });
 
-// ============================== MODEL LOAD ==============================
-var customModel;
-var parts = {};
-
-var loader = new THREE.FBXLoader();
-loader.load(
-  'assets/modelos/legomandefault.fbx',
-  function (object) {
-    object.scale.set(0.01, 0.01, 0.01);
-    var bbox = new THREE.Box3().setFromObject(object);
-    var center = bbox.getCenter(new THREE.Vector3());
-    object.position.sub(center);
-
-    scene.add(object);
-    customModel = object;
-
-    parts.head        = object.getObjectByName('Cylinder006');
-    parts.armLeft     = object.getObjectByName('Cylinder009');
-    parts.armRight    = object.getObjectByName('Cylinder012');
-    parts.handLeft    = object.getObjectByName('Cylinder004');
-    parts.handRight   = object.getObjectByName('Cylinder016');
-    parts.legLeft     = object.getObjectByName('Cylinder014');
-    parts.legRight    = object.getObjectByName('Cylinder013');
-    parts.body        = object.getObjectByName('Cylinder009');
-    parts.trousers    = object.getObjectByName('Cylinder010');
-    parts.innertight  = object.getObjectByName('Cylinder011');
-
-    setupPivot(parts.head, 'head', new THREE.Vector3(0, -0.008, 0.002), customModel);
-    setupPivot(parts.handLeft, 'handLeft', new THREE.Vector3(0.015, 0, 0), parts.armLeft);
-    setupPivot(parts.handRight, 'handRight', new THREE.Vector3(-0.015, 0, 0), parts.armRight);
-  },
-  undefined,
-  function (error) {
-    console.error('Erro ao carregar modelo:', error);
-  }
-);
-
-// ============================== PIVOTS ==============================
-function setupPivot(part, name, offset, parent) {
-  const partWorldPos = new THREE.Vector3();
-  part.getWorldPosition(partWorldPos);
-
-  const parentWorldPos = new THREE.Vector3();
-  parent.getWorldPosition(parentWorldPos);
-
-  const localPivotPos = partWorldPos.clone().sub(parentWorldPos).add(offset);
-
-  const pivot = new THREE.Group();
-  pivot.name = name + '_pivot';
-  pivot.position.copy(localPivotPos);
-
-  parent.add(pivot);
-  pivot.add(part);
-
-  part.position.set(0, 0, 0); 
-
-  parts[name] = pivot;
-}
-
-// ============================== ANIMATION CONTROLS ==============================
-let activeTweens = [];
-
-function clearTweens() {
-  activeTweens.forEach(tween => tween.stop());
-  activeTweens = [];
-
-  Object.values(parts).forEach(p => {
-    if (p && p.rotation) p.rotation.set(0, 0, 0);
-  });
-}
-
+// ========================== ANIMATIONS ==========================
 function playAnimation(type) {
-  clearTweens();
-
-  if (type === 'dancar' && parts.armLeft && parts.armRight) {
-    activeTweens.push(
-      new TWEEN.Tween(parts.armLeft.rotation)
-        .to({ z: -Math.PI / 3 }, 600)
-        .easing(TWEEN.Easing.Sinusoidal.InOut)
-        .yoyo(true)
-        .repeat(Infinity)
-        .start(),
-      new TWEEN.Tween(parts.armRight.rotation)
-        .to({ z: Math.PI / 3 }, 600)
-        .easing(TWEEN.Easing.Sinusoidal.InOut)
-        .yoyo(true)
-        .repeat(Infinity)
-        .start()
-    );
-  }
-
-  if (type === 'caminhar' && parts.legLeft && parts.legRight) {
-    activeTweens.push(
-      new TWEEN.Tween(parts.legLeft.rotation)
-        .to({ x: Math.PI / 4 }, 400)
-        .easing(TWEEN.Easing.Sinusoidal.InOut)
-        .yoyo(true)
-        .repeat(Infinity)
-        .start(),
-      new TWEEN.Tween(parts.legRight.rotation)
-        .to({ x: -Math.PI / 4 }, 400)
-        .easing(TWEEN.Easing.Sinusoidal.InOut)
-        .yoyo(true)
-        .repeat(Infinity)
-        .start()
-    );
-  }
-
-  if (type === 'rodarCabeca' && parts.head) {
-    activeTweens.push(
-      new TWEEN.Tween(parts.head.rotation)
-        .to({ y: Math.PI / 2 }, 800)
-        .easing(TWEEN.Easing.Sinusoidal.InOut)
-        .yoyo(true)
-        .repeat(Infinity)
-        .start()
-    );
-  }
+    clearTweens();
+    if (type === 'dancar' && parts.armLeft && parts.armRight) {
+        activeTweens.push(
+            new TWEEN.Tween(parts.armLeft.rotation)
+                .to({ z: -Math.PI / 3 }, 600)
+                .easing(TWEEN.Easing.Sinusoidal.InOut)
+                .yoyo(true)
+                .repeat(Infinity)
+                .start(),
+            new TWEEN.Tween(parts.armRight.rotation)
+                .to({ z: Math.PI / 3 }, 600)
+                .easing(TWEEN.Easing.Sinusoidal.InOut)
+                .yoyo(true)
+                .repeat(Infinity)
+                .start()
+        );
+    }
+    if (type === 'caminhar' && parts.legLeft && parts.legRight) {
+        activeTweens.push(
+            new TWEEN.Tween(parts.legLeft.rotation)
+                .to({ y: Math.PI / 4 }, 400)
+                .easing(TWEEN.Easing.Sinusoidal.InOut)
+                .yoyo(true)
+                .repeat(Infinity)
+                .start(),
+            new TWEEN.Tween(parts.legRight.rotation)
+                .to({ y: -Math.PI / 4 }, 400)
+                .easing(TWEEN.Easing.Sinusoidal.InOut)
+                .yoyo(true)
+                .repeat(Infinity)
+                .start()
+        );
+    }
+    if (type === 'rodarCabeca' && parts.head) {
+        activeTweens.push(
+            new TWEEN.Tween(parts.head.rotation)
+                .to({ y: Math.PI / 2 }, 800)
+                .easing(TWEEN.Easing.Sinusoidal.InOut)
+                .yoyo(true)
+                .repeat(Infinity)
+                .start()
+        );
+    }
 }
 
 window.playAnimation = playAnimation;
 window.clearTweens = clearTweens;
 
-// ============================== ANIMATION LOOP ==============================
+// ========================== RENDER LOOP ==========================
 var clock = new THREE.Clock();
 function animate() {
-  requestAnimationFrame(animate);
-  let delta = clock.getDelta();
-
-  TWEEN.update();
-  controls.update();
-  renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+    clock.getDelta();
+    TWEEN.update();
+    controls.update();
+    renderer.render(scene, camera);
 }
 animate();
