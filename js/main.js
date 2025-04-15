@@ -47,15 +47,21 @@ function clearTweens() {
 
 // ========================== LOAD MODEL ==========================
 window.changeModel = function changeModel(modelPath) {
+    var loader = new THREE.FBXLoader();
+    
     clearTweens();
     if (customModel) {
         scene.remove(customModel);
         customModel = null;
         parts = {};
     }
+
+    if (modelPath === 'assets/modelos/lego spider man.fbx') {
+        loader.setResourcePath('assets/skins/'); 
+    }
     
     console.log("Carregando o modelo:", modelPath);
-    var loader = new THREE.FBXLoader();
+    
     loader.load(
         modelPath,
         function (object) {
@@ -88,6 +94,14 @@ window.changeModel = function changeModel(modelPath) {
             scene.add(object);
             customModel = object;
 
+            object.traverse(function (child) {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                }
+            });
+
+
             if (modelPath === 'assets/modelos/legomandefault.fbx') {
                 parts.head = object.getObjectByName('Cylinder006');
                 parts.armLeft = object.getObjectByName('Cylinder009');
@@ -115,13 +129,28 @@ window.changeModel = function changeModel(modelPath) {
 changeModel('assets/modelos/legomandefault.fbx');
 
 // ========================== LIGHTS ==========================
-var ambientLight = new THREE.AmbientLight(0x404040);
+var ambientLight = new THREE.AmbientLight(0xffffff, 0.3); // luz branca com baixa intensidade
 scene.add(ambientLight);
 
-var sunLight = new THREE.DirectionalLight(0xffffff, 1);
-sunLight.position.set(50, 100, 50);
-sunLight.castShadow = true;
-scene.add(sunLight);
+var directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+directionalLight.position.set(50, 100, 50);
+directionalLight.castShadow = true;
+
+directionalLight.shadow.mapSize.width = 2048;
+directionalLight.shadow.mapSize.height = 2048;
+
+directionalLight.shadow.camera.near = 0.5;
+directionalLight.shadow.camera.far = 500;
+directionalLight.shadow.camera.left = -100;
+directionalLight.shadow.camera.right = 100;
+directionalLight.shadow.camera.top = 100;
+directionalLight.shadow.camera.bottom = -100;
+
+scene.add(directionalLight);
+
+
+// var helper = new THREE.CameraHelper( directionalLight.shadow.camera );
+// scene.add(helper);
 
 // ========================== ORBIT CONTROLS ==========================
 var controls = new THREE.OrbitControls(camera, renderer.domElement);
