@@ -67,9 +67,103 @@
         margin-right: 10px;
       }
 
+      .model-selection {
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .model-selection h3 {
+        margin: 0 0 5px 0;
+        font-size: 14px;
+      }
+
       .animation-controls {
         display: flex;
         flex-direction: column;
+      }
+
+      .animation-controls h3 {
+        margin: 0 0 5px 0;
+        font-size: 14px;
+      }
+
+      #volumeControl {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 15px;
+        border-radius: 10px;
+        z-index: 999;
+        font-family: sans-serif;
+        box-shadow: 0 0 15px rgba(0,0,0,0.3);
+        min-width: 200px;
+      }
+
+      .volume-section h4 {
+        margin: 0 0 10px 0;
+        font-size: 14px;
+        text-align: center;
+      }
+
+      .volume-slider-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      #volumeSlider {
+        flex: 1;
+        appearance: none;
+        height: 5px;
+        background: #ddd;
+        border-radius: 5px;
+        outline: none;
+      }
+
+      #volumeSlider::-webkit-slider-thumb {
+        appearance: none;
+        width: 15px;
+        height: 15px;
+        background: #4CAF50;
+        border-radius: 50%;
+        cursor: pointer;
+      }
+
+      #volumeSlider::-moz-range-thumb {
+        width: 15px;
+        height: 15px;
+        background: #4CAF50;
+        border-radius: 50%;
+        cursor: pointer;
+        border: none;
+      }
+
+      #volumeValue {
+        min-width: 35px;
+        font-size: 12px;
+      }
+
+      #muteBtn {
+        width: 100%;
+        padding: 5px;
+        background: #ff4444;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      #muteBtn:hover {
+        background: #ff6666;
+      }
+
+      #muteBtn.muted {
+        background: #666;
       }
     </style>
   </head>
@@ -91,11 +185,29 @@
         </select>
       </div>
       
+      <div class="model-selection">
+        <h3>🧱 Escolher Modelo:</h3>
+        <button onclick="loadDarthMaul()">⚔️ Darth Maul</button>
+        <button onclick="loadIndianaJones()">🤠 Indiana Jones</button>
+        <button onclick="loadTravisScott()">🎤 Travis Scott</button>
+      </div>
+      
       <div class="animation-controls">
-        <button onclick="playAnimation('combate')">⚔️ Combate</button>
+        <h3>🎬 Animações:</h3>
         <button onclick="playAnimation('mortal')">🤸 Mortal para Trás</button>
-        <button onclick="playAnimation('idle')">🧘 Parado</button>
         <button onclick="clearTweens()">⛔ Parar</button>
+      </div>
+    </div>
+
+    <div id="volumeControl" style="display: none;">
+      <div class="volume-section">
+        <h4>🎵 Volume</h4>
+        <div class="volume-slider-container">
+          <span>🔊</span>
+          <input type="range" id="volumeSlider" min="0" max="100" value="50" oninput="changeVolume(this.value)">
+          <span id="volumeValue">50%</span>
+        </div>
+        <button id="muteBtn" onclick="toggleMute()">🔇 Mute</button>
       </div>
     </div>
 
